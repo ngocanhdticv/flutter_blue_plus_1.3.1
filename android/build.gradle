@@ -1,33 +1,67 @@
 group 'com.boskokg.flutter_blue_plus'
 version '1.0'
 
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.1.0'
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.17'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
 apply plugin: 'com.android.library'
+apply plugin: 'com.google.protobuf'
 
 android {
-    compileSdkVersion 33
+    compileSdkVersion 31
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    lintOptions {
-        abortOnError false
-    }
-
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 19
     }
-
-    gradle.projectsEvaluated {
-        tasks.withType(JavaCompile) {
-            options.compilerArgs << "-Xlint:deprecation"
-            options.compilerArgs << "-Xlint:unchecked"
+    sourceSets {
+        main {
+            proto {
+                srcDir '../protos'
+            }
         }
     }
+}
 
-    // Conditional for compatibility with AGP <4.2.
-    if (project.android.hasProperty("namespace")) {
-        namespace 'com.boskokg.flutter_blue_plus'
+protobuf {
+    protoc {
+        if (project.hasProperty('protoc_platform')) {
+            artifact = "com.google.protobuf:protoc:3.18.0:${protoc_platform}"
+        } else {
+            artifact = "com.google.protobuf:protoc:3.18.0"
+        }
     }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java {
+                    option "lite"
+                }
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.google.protobuf:protobuf-javalite:3.18.0'
 }

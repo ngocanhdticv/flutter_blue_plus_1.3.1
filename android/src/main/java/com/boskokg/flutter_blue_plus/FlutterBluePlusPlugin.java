@@ -255,130 +255,19 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
 
       case "startScan":
       {
-        // see: BmScanSettings
-        ArrayList<String> permissions = new ArrayList<>();
-
-        if (Build.VERSION.SDK_INT >= 31) { // Android 12 (October 2021)
-          permissions.add(Manifest.permission.BLUETOOTH_SCAN);
-          permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
-          // it is unclear why this is needed, but some phones throw a
-          // SecurityException AdapterService getRemoteName, without it
-          permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
-        }
-
-        if (Build.VERSION.SDK_INT <= 30) { // Android 11 (September 2020)
-          permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        }
-
-        ensurePermissions(permissions, (granted, perm) -> {
-
-          if (granted == false) {
-            result.error("startScan",
-                    String.format("FlutterBluePlus requires %s permission", perm), null);
-            return;
+        ensurePermissionBeforeAction(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? Manifest.permission.BLUETOOTH_SCAN : Manifest.permission.ACCESS_FINE_LOCATION, (grantedScan, permissionScan) -> {
+          if (grantedScan) {
+            ensurePermissionBeforeAction(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? Manifest.permission.BLUETOOTH_CONNECT : null, (grantedConnect, permissionConnect) -> {
+              if (grantedConnect)
+                startScan(call, result);
+              else
+                result.error(
+                        "no_permissions", String.format("flutter_blue plugin requires %s for scanning", permissionConnect), null);
+            });
           }
-
-          // check adapter
-          if (isAdapterOn() == false) {
-            result.error("startScan", String.format("bluetooth must be turned on"), null);
-            return;
-          }
-
-          // get scanner
-          BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
-          if(scanner == null) {
-            result.error("startScan", String.format("getBluetoothLeScanner() is null. Is the Adapter on?"), null);
-            return;
-          }
-
-          // build scan settings
-          ScanSettings.Builder builder = new ScanSettings.Builder();
-          builder.setScanMode(androidScanMode);
-          if (Build.VERSION.SDK_INT >= 26) { // Android 8.0 (August 2017)
-            builder.setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED);
-            builder.setLegacy(androidLegacy);
-          }
-          ScanSettings settings = builder.build();
-
-          // set filters
-          List<ScanFilter> filters = new ArrayList<>();
-
-          // services
-          for (int i = 0; i < withServices.size(); i++) {
-            ParcelUuid s = ParcelUuid.fromString(uuid128(withServices.get(i)));
-            ScanFilter f = new ScanFilter.Builder().setServiceUuid(s).build();
-            filters.add(f);
-          }
-
-          // remoteIds
-          for (int i = 0; i < withRemoteIds.size(); i++) {
-            String address = withRemoteIds.get(i);
-            ScanFilter f = new ScanFilter.Builder().setDeviceAddress(address).build();
-            filters.add(f);
-          }
-
-          // names
-          for (int i = 0; i < withNames.size(); i++) {
-            String name = withNames.get(i);
-            ScanFilter f = new ScanFilter.Builder().setDeviceName(name).build();
-            filters.add(f);
-          }
-
-          // keywords
-          if (Build.VERSION.SDK_INT >= 33) { // Android 13 (August 2022)
-            if (withKeywords.size() > 0) {
-              // device must advertise a name
-              int a1 = ScanRecord.DATA_TYPE_LOCAL_NAME_SHORT;
-              int a2 = ScanRecord.DATA_TYPE_LOCAL_NAME_COMPLETE;
-              ScanFilter f1 = new ScanFilter.Builder().setAdvertisingDataType(a1).build();
-              ScanFilter f2 = new ScanFilter.Builder().setAdvertisingDataType(a2).build();
-              filters.add(f1);
-              filters.add(f2);
-            }
-          }
-
-          // msd
-          for (int i = 0; i < withMsd.size(); i++) {
-            HashMap<String, Object> m = (HashMap<String, Object>) withMsd.get(i);
-            int id =                    (int) m.get("manufacturer_id");
-            byte[] mdata = hexToBytes((String) m.get("data"));
-            byte[] mask =  hexToBytes((String) m.get("mask"));
-            ScanFilter f = null;
-            if (mask.length == 0) {
-              f = new ScanFilter.Builder().setManufacturerData(id, mdata).build();
-            } else {
-              f = new ScanFilter.Builder().setManufacturerData(id, mdata, mask).build();
-            }
-            filters.add(f);
-          }
-
-          // service data
-          for (int i = 0; i < withServiceData.size(); i++) {
-            HashMap<String, Object> m = (HashMap<String, Object>) withServiceData.get(i);
-            ParcelUuid s = ParcelUuid.fromString((String) m.get("service"));
-            byte[] mdata =             hexToBytes((String) m.get("data"));
-            byte[] mask =              hexToBytes((String) m.get("mask"));
-            ScanFilter f = null;
-            if (mask.length == 0) {
-              f = new ScanFilter.Builder().setServiceData(s, mdata).build();
-            } else {
-              f = new ScanFilter.Builder().setServiceData(s, mdata, mask).build();
-            }
-            filters.add(f);
-          }
-
-          // remember for later
-          mScanFilters = data;
-
-          // clear seen devices
-          mAdvSeen.clear();
-          mScanCounts.clear();
-
-          scanner.startScan(filters, settings, getScanCallback());
-
-          mIsScanning = true;
-
-          result.success(true);
+          else
+            result.error(
+                    "no_permissions", String.format("flutter_blue plugin requires %s for scanning", permissionScan), null);
         });
         break;
       }
