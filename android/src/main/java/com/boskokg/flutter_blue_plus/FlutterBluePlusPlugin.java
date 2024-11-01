@@ -274,14 +274,8 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
 
       case "stopScan":
       {
-        BluetoothLeScanner scanner = mBluetoothAdapter.getBluetoothLeScanner();
-
-        if(scanner != null) {
-          scanner.stopScan(getScanCallback());
-          mIsScanning = false;
-        }
-
-        result.success(true);
+        stopScan();
+        result.success(null);
         break;
       }
 
