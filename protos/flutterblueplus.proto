@@ -4,7 +4,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.boskokg.flutter_blue_plus";
+option java_package = "com.lib.flutter_blue_plus";
 option java_outer_classname = "Protos";
 option objc_class_prefix = "Protos";
 

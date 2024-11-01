@@ -25,10 +25,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-package com.boskokg.flutter_blue_plus;
+package com.lib.flutter_blue_plus;
 
 import com.google.protobuf.ByteString;
-import com.boskokg.flutter_blue_plus.Protos.AdvertisementData;
+import com.lib.flutter_blue_plus.Protos.AdvertisementData;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
