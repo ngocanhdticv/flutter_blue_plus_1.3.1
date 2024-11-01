@@ -716,26 +716,6 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
       }
     }
   }
-
-  private void ensurePermissions(List<String> permissions, OperationOnPermission operation) {
-    // Filter out permissions that are already granted
-    List<String> permissionsNeeded = new ArrayList<>();
-    for (String permission : permissions) {
-      if (permission != null && ContextCompat.checkSelfPermission(context, permission)
-              != PackageManager.PERMISSION_GRANTED) {
-        permissionsNeeded.add(permission);
-      }
-    }
-
-    // If all permissions are granted, proceed with the operation
-    if (permissionsNeeded.isEmpty()) {
-      operation.op(true, null);
-      return;
-    }
-
-    askPermission(permissionsNeeded, operation);
-  }
-
   private void ensurePermissionBeforeAction(String permission, OperationOnPermission operation) {
     if (permission != null &&
             ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
