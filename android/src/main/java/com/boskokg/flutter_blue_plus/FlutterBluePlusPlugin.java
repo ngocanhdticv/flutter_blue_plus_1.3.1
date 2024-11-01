@@ -256,25 +256,11 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
       case "startScan":
       {
         // see: BmScanSettings
-        HashMap<String, Object> data = call.arguments();
-        List<String> withServices =    (List<String>) data.get("with_services");
-        List<String> withRemoteIds =   (List<String>) data.get("with_remote_ids");
-        List<String> withNames =       (List<String>) data.get("with_names");
-        List<String> withKeywords =    (List<String>) data.get("with_keywords");
-        List<Object> withMsd =         (List<Object>) data.get("with_msd");
-        List<Object> withServiceData = (List<Object>) data.get("with_service_data");
-        boolean continuousUpdates =         (boolean) data.get("continuous_updates");
-        boolean androidLegacy =             (boolean) data.get("android_legacy");
-        int androidScanMode =                   (int) data.get("android_scan_mode");
-        boolean androidUsesFineLocation =   (boolean) data.get("android_uses_fine_location");
-
         ArrayList<String> permissions = new ArrayList<>();
 
         if (Build.VERSION.SDK_INT >= 31) { // Android 12 (October 2021)
           permissions.add(Manifest.permission.BLUETOOTH_SCAN);
-          if (androidUsesFineLocation) {
-            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
-          }
+          permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
           // it is unclear why this is needed, but some phones throw a
           // SecurityException AdapterService getRemoteName, without it
           permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
@@ -840,6 +826,25 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
         break;
       }
     }
+  }
+
+  private void ensurePermissions(List<String> permissions, OperationOnPermission operation) {
+    // Filter out permissions that are already granted
+    List<String> permissionsNeeded = new ArrayList<>();
+    for (String permission : permissions) {
+      if (permission != null && ContextCompat.checkSelfPermission(context, permission)
+              != PackageManager.PERMISSION_GRANTED) {
+        permissionsNeeded.add(permission);
+      }
+    }
+
+    // If all permissions are granted, proceed with the operation
+    if (permissionsNeeded.isEmpty()) {
+      operation.op(true, null);
+      return;
+    }
+
+    askPermission(permissionsNeeded, operation);
   }
 
   private void ensurePermissionBeforeAction(String permission, OperationOnPermission operation) {
