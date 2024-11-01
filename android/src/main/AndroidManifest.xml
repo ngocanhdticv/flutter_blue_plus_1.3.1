@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.boskokg.flutter_blue_plus">
+  package="com.boskokg.flutter_blue_plus">
 
     <!-- New Bluetooth permissions in Android 12
            https://developer.android.com/about/versions/12/features/bluetooth-permissions
