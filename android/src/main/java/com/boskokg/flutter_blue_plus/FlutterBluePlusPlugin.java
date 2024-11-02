@@ -803,7 +803,7 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
       sink = eventSink;
       IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        context.registerReceiver(mReceiver, filter, RECEIVER_EXPORTED);
+        context.registerReceiver(mReceiver, filter, Context.RECEIVER_EXPORTED);
       } else {
         context.registerReceiver(mReceiver, filter);
       }
