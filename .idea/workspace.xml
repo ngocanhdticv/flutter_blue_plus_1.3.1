@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ddd573ae-26eb-479d-a1ad-6a8294ed5df8" name="Changes" comment="" />
+    <list default="true" id="ddd573ae-26eb-479d-a1ad-6a8294ed5df8" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/src/main/java/com/boskokg/flutter_blue_plus/FlutterBluePlusPlugin.java" beforeDir="false" afterPath="$PROJECT_DIR$/android/src/main/java/com/boskokg/flutter_blue_plus/FlutterBluePlusPlugin.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_device.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_device.dart" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

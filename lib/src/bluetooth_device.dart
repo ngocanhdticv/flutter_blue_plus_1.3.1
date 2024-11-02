@@ -25,6 +25,7 @@ class BluetoothDevice {
 
   final BehaviorSubject<bool> _isDiscoveringServices =
       BehaviorSubject.seeded(false);
+
   Stream<bool> get isDiscoveringServices => _isDiscoveringServices.stream;
 
   /// Establishes a connection to the Bluetooth Device.
@@ -60,6 +61,16 @@ class BluetoothDevice {
     if (Platform.isAndroid) {
       return FlutterBluePlus.instance._channel
           .invokeMethod('pair', id.toString());
+    }
+  }
+
+  /// Refresh Gatt Device Cache
+  /// Emergency method to reload ble services & characteristics
+  /// Currently only implemented on Android.
+  Future<void> clearGattCache() async {
+    if (Platform.isAndroid) {
+      return FlutterBluePlus.instance._channel
+          .invokeMethod('clearGattCache', id.toString());
     }
   }
 
