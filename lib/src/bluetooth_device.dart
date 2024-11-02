@@ -22,25 +22,25 @@ class BluetoothDevice {
   //
 
   final DeviceIdentifier remoteId;
-  final String localName;
+  final String advName;
   final BluetoothDeviceType type;
 
   BluetoothDevice({
     required this.remoteId,
-    required this.localName,
+    required this.advName,
     required this.type,
   });
 
   BluetoothDevice.fromProto(BmBluetoothDevice p)
       : remoteId = DeviceIdentifier(p.remoteId),
-        localName = p.localName ?? "",
+        advName = p.advName ?? "",
         type = _bmToBluetoothDeviceType(p.type);
 
   /// allows connecting to a known device without re-scanning
   /// Note: this device must have been discovered by your app in a previous scan
-  BluetoothDevice.fromId(String remoteId, {String? localName, BluetoothDeviceType? type})
+  BluetoothDevice.fromId(String remoteId, {String? advName, BluetoothDeviceType? type})
       : remoteId = DeviceIdentifier(remoteId),
-        localName = localName ?? "Unknown",
+        advName = advName ?? "Unknown",
         type = type ?? BluetoothDeviceType.unknown;
 
   // stream return whether or not we are currently discovering services
@@ -435,7 +435,7 @@ class BluetoothDevice {
   String toString() {
     return 'BluetoothDevice{'
         'remoteId: $remoteId, '
-        'localName: $localName, '
+        'advName: $advName, '
         'type: $type, '
         'isDiscoveringServices: ${_isDiscoveringServices.value}, '
         'services: ${_knownServices[remoteId]}'
@@ -448,8 +448,8 @@ class BluetoothDevice {
   @Deprecated('Use remoteId instead')
   DeviceIdentifier get id => remoteId;
 
-  @Deprecated('Use localName instead')
-  String get name => localName;
+  @Deprecated('Use advName instead')
+  String get name => advName;
 
   @Deprecated('Use connectionState instead')
   Stream<BluetoothConnectionState> get state => connectionState;

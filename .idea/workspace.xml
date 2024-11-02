@@ -5,27 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="ddd573ae-26eb-479d-a1ad-6a8294ed5df8" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/lib/src/bluetooth_msgs.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/src/bluetooth_utils.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/src/utils.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config_subset" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config_subset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/example/.dart_tool/package_config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/.dart_tool/package_config_subset" beforeDir="false" afterPath="$PROJECT_DIR$/example/.dart_tool/package_config_subset" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/.flutter-plugins" beforeDir="false" afterPath="$PROJECT_DIR$/example/.flutter-plugins" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/example/.flutter-plugins-dependencies" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java" beforeDir="false" afterPath="$PROJECT_DIR$/example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.m" beforeDir="false" afterPath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.m" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/flutter_blue_plus.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/flutter_blue_plus.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_characteristic.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_characteristic.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_descriptor.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_descriptor.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_device.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_device.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/src/flutter_blue_plus.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/flutter_blue_plus.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/src/guid.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/guid.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/example/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/lib/widgets.dart" beforeDir="false" afterPath="$PROJECT_DIR$/example/lib/widgets.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
