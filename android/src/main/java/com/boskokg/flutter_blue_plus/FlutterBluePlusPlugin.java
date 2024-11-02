@@ -714,16 +714,25 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
   private void ensurePermissionBeforeAction(String permission, OperationOnPermission operation) {
     if (permission != null &&
             ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-      operationsOnPermission.put(lastEventId, (granted, perm) -> {
-        operationsOnPermission.remove(lastEventId);
-        operation.op(granted, perm);
-      });
-      ActivityCompat.requestPermissions(
-              activityBinding.getActivity(),
-              new String[]{permission},
-              lastEventId);
-      lastEventId++;
+      // Ensure activityBinding is valid
+      if (activityBinding != null && activityBinding.getActivity() != null) {
+        int requestCode = lastEventId; // Keep a unique ID for each request
+        operationsOnPermission.put(requestCode, (granted, perm) -> {
+          operationsOnPermission.remove(requestCode);
+          operation.op(granted, perm);
+        });
+        ActivityCompat.requestPermissions(
+                activityBinding.getActivity(),
+                new String[]{permission},
+                requestCode
+        );
+        lastEventId++;
+      } else {
+        // Handle error: activityBinding not available
+        operation.op(false, permission);
+      }
     } else {
+      // Permission already granted
       operation.op(true, permission);
     }
   }
