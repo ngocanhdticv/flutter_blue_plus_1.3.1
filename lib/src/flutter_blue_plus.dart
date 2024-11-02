@@ -30,10 +30,12 @@ class FlutterBluePlus {
   }
 
   static final FlutterBluePlus _instance = FlutterBluePlus._();
+
   static FlutterBluePlus get instance => _instance;
 
   /// Log level of the instance, default is all messages (debug).
   LogLevel _logLevel = LogLevel.debug;
+
   LogLevel get logLevel => _logLevel;
 
   /// Checks whether the device supports Bluetooth
@@ -70,6 +72,7 @@ class FlutterBluePlus {
   }
 
   final BehaviorSubject<bool> _isScanning = BehaviorSubject.seeded(false);
+
   Stream<bool> get isScanning => _isScanning.stream;
 
   final BehaviorSubject<List<ScanResult>> _scanResults =
@@ -159,9 +162,7 @@ class FlutterBluePlus {
     try {
       await _channel.invokeMethod('startScan', settings.writeToBuffer());
     } catch (e) {
-      if (kDebugMode) {
-        print('Error starting scan.');
-      }
+      print('Error starting scan.');
       _stopScanPill.add(null);
       _isScanning.add(false);
       rethrow;
@@ -271,6 +272,7 @@ enum BluetoothState {
 
 class ScanMode {
   const ScanMode(this.value);
+
   static const lowPower = ScanMode(0);
   static const balanced = ScanMode(1);
   static const lowLatency = ScanMode(2);
@@ -280,6 +282,7 @@ class ScanMode {
 
 class DeviceIdentifier {
   final String id;
+
   const DeviceIdentifier(this.id);
 
   @override
