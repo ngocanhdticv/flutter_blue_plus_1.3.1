@@ -4,7 +4,29 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ddd573ae-26eb-479d-a1ad-6a8294ed5df8" name="Changes" comment="" />
+    <list default="true" id="ddd573ae-26eb-479d-a1ad-6a8294ed5df8" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/lib/src/bluetooth_msgs.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/src/bluetooth_utils.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/src/utils.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config_subset" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config_subset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/example/.dart_tool/package_config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/.dart_tool/package_config_subset" beforeDir="false" afterPath="$PROJECT_DIR$/example/.dart_tool/package_config_subset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/.flutter-plugins" beforeDir="false" afterPath="$PROJECT_DIR$/example/.flutter-plugins" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/example/.flutter-plugins-dependencies" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java" beforeDir="false" afterPath="$PROJECT_DIR$/example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.m" beforeDir="false" afterPath="$PROJECT_DIR$/example/ios/Runner/GeneratedPluginRegistrant.m" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/flutter_blue_plus.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/flutter_blue_plus.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_characteristic.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_characteristic.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_descriptor.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_descriptor.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_device.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_device.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/bluetooth_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/bluetooth_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/flutter_blue_plus.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/flutter_blue_plus.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/src/guid.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/src/guid.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -25,17 +47,22 @@
   <component name="ProjectViewState">
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;E:/blue_plus_flutter&quot;,
-    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "last_opened_file_path": "E:/code/flutter/library/flutter_blue_plus_1.3.1/lib/src",
+    "show.migrate.to.gradle.popup": "false"
   }
-}</component>
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\code\flutter\library\flutter_blue_plus_1.3.1\lib\src" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="main.dart" type="FlutterRunConfigurationType" factoryName="Flutter">
       <option name="filePath" value="$PROJECT_DIR$/example/lib/main.dart" />

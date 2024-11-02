@@ -5,200 +5,455 @@
 part of flutter_blue_plus;
 
 class BluetoothDevice {
-  final DeviceIdentifier id;
-  final String name;
+  ////////////////////////////////
+  // Internal
+  //
+
+  static Map<DeviceIdentifier, List<BluetoothService>> _knownServices = {};
+
+  // used for 'services' public api
+  final StreamController<List<BluetoothService>> _services = StreamController.broadcast();
+
+  // used for 'isDiscoveringServices' public api
+  final _StreamController<bool> _isDiscoveringServices = _StreamController(initialValue: false);
+
+  ////////////////////////////////
+  // Public
+  //
+
+  final DeviceIdentifier remoteId;
+  final String localName;
   final BluetoothDeviceType type;
 
-  BluetoothDevice.fromProto(protos.BluetoothDevice p)
-      : id = DeviceIdentifier(p.remoteId),
-        name = p.name,
-        type = BluetoothDeviceType.values[p.type.value];
+  BluetoothDevice({
+    required this.remoteId,
+    required this.localName,
+    required this.type,
+  });
 
-  /// Use on Android when the MAC address is known.
-  ///
-  /// This constructor enables the Android to connect to a specific device
-  /// as soon as it becomes available on the bluetooth "network".
-  BluetoothDevice.fromId(String id, {String? name, BluetoothDeviceType? type})
-      : id = DeviceIdentifier(id),
-        name = name ?? "Unknown name",
+  BluetoothDevice.fromProto(BmBluetoothDevice p)
+      : remoteId = DeviceIdentifier(p.remoteId),
+        localName = p.localName ?? "",
+        type = _bmToBluetoothDeviceType(p.type);
+
+  /// allows connecting to a known device without re-scanning
+  /// Note: this device must have been discovered by your app in a previous scan
+  BluetoothDevice.fromId(String remoteId, {String? localName, BluetoothDeviceType? type})
+      : remoteId = DeviceIdentifier(remoteId),
+        localName = localName ?? "Unknown",
         type = type ?? BluetoothDeviceType.unknown;
 
-  final BehaviorSubject<bool> _isDiscoveringServices =
-      BehaviorSubject.seeded(false);
+  // stream return whether or not we are currently discovering services
   Stream<bool> get isDiscoveringServices => _isDiscoveringServices.stream;
 
-  /// Establishes a connection to the Bluetooth Device.
-  Future<void> connect({
-    Duration? timeout,
-    bool autoConnect = true,
-  }) async {
-    var request = protos.ConnectRequest.create()
-      ..remoteId = id.toString()
-      ..androidAutoConnect = autoConnect;
+  // Get services
+  //  - returns null if discoverServices() has not been called
+  List<BluetoothService>? get servicesList => _knownServices[remoteId];
 
-    await FlutterBluePlus.instance._channel
-        .invokeMethod('connect', request.writeToBuffer());
-
-    if (timeout == null) {
-      await state.firstWhere((s) => s == BluetoothDeviceState.connected);
-    } else {
-      await state
-          .firstWhere((s) => s == BluetoothDeviceState.connected)
-          .timeout(
-        timeout,
-        onTimeout: () {
-          disconnect();
-          throw TimeoutException('Failed to connect in time.', timeout);
-        },
-      );
+  /// Stream of bluetooth services offered by the remote device
+  Stream<List<BluetoothService>> get servicesStream async* {
+    if (_knownServices[remoteId] != null) {
+      yield _knownServices[remoteId]!;
     }
+    yield* _services.stream;
   }
 
-  /// Send a pairing request to the device.
-  /// Currently only implemented on Android.
-  Future<void> pair() async {
-    if (Platform.isAndroid) {
-      return FlutterBluePlus.instance._channel
-          .invokeMethod('pair', id.toString());
+  /// Establishes a connection to the Bluetooth Device.
+  ///   [autoConnect] Android only. reconnect whenever the device is found. This only
+  ///   works if the device is in the Bluetooth scan cache or it is has been bonded before.
+  ///   The scan cache is cleared whenever bluetooth is turned off.
+  Future<void> connect({
+    Duration timeout = const Duration(seconds: 15),
+    bool autoConnect = false,
+  }) async {
+    // Only allow a single 'connectDisconnect' operation to be underway per device.
+    String key = remoteId.str + ":connectDisconnect";
+    _Mutex opMutex = await _MutexFactory.getMutexForKey(key);
+    await opMutex.take();
+
+    try {
+      var request = BmConnectRequest(
+        remoteId: remoteId.str,
+        autoConnect: autoConnect,
+      );
+
+      BluetoothConnectionState initialState = await connectionState.where((s) =>
+      s == BluetoothConnectionState.connected ||
+          s == BluetoothConnectionState.disconnected).first;
+
+      if (initialState == BluetoothConnectionState.connected) {
+        return; // no work to do
+      }
+
+      var responseStream = FlutterBluePlus._methodStream.stream
+          .where((m) => m.method == "OnConnectionStateChanged")
+          .map((m) => m.arguments)
+          .map((buffer) => BmConnectionStateResponse.fromMap(buffer))
+          .where((p) => p.remoteId == remoteId.str)
+          .where((p) =>
+      p.connectionState == BmConnectionStateEnum.disconnected ||
+          p.connectionState == BmConnectionStateEnum.connected);
+
+      // Start listening now, before invokeMethod, to ensure we don't miss the response
+      Future<BmConnectionStateResponse> futureState = responseStream.first;
+
+      await FlutterBluePlus._invokeMethod('connect', request.toMap());
+
+      // wait for result
+      BmConnectionStateResponse response = await futureState.timeout(timeout);
+
+      // failure?
+      if (response.connectionState == BmConnectionStateEnum.disconnected) {
+        throw FlutterBluePlusException('connect', response.errorCode, response.errorString);
+      }
+    } finally {
+      opMutex.give();
     }
   }
 
   /// Cancels connection to the Bluetooth Device
-  Future disconnect() => FlutterBluePlus.instance._channel
-      .invokeMethod('disconnect', id.toString());
+  Future<void> disconnect({int timeout = 15}) async {
+    // Only allow a single 'connectDisconnect' operation to be underway per device.
+    String key = remoteId.str + ":connectDisconnect";
+    _Mutex opMutex = await _MutexFactory.getMutexForKey(key);
+    await opMutex.take();
 
-  final BehaviorSubject<List<BluetoothService>> _services =
-      BehaviorSubject.seeded([]);
+    try {
+      BluetoothConnectionState initialState = await connectionState.where((s) =>
+      s == BluetoothConnectionState.connected ||
+          s == BluetoothConnectionState.disconnected).first;
 
-  /// Discovers services offered by the remote device as well as their characteristics and descriptors
-  Future<List<BluetoothService>> discoverServices() async {
-    final s = await state.first;
-    if (s != BluetoothDeviceState.connected) {
-      return Future.error(Exception(
-          'Cannot discoverServices while device is not connected. State == $s'));
+      if (initialState == BluetoothConnectionState.disconnected) {
+        return; // no work to do
+      }
+
+      var responseStream = FlutterBluePlus._methodStream.stream
+          .where((m) => m.method == "OnConnectionStateChanged")
+          .map((m) => m.arguments)
+          .map((buffer) => BmConnectionStateResponse.fromMap(buffer))
+          .where((p) => p.remoteId == remoteId.str)
+          .where((p) => p.connectionState == BmConnectionStateEnum.disconnected);
+
+      // Start listening now, before invokeMethod, to ensure we don't miss the response
+      Future<BmConnectionStateResponse> futureState = responseStream.first;
+
+      await FlutterBluePlus._invokeMethod('disconnect', remoteId.str);
+
+      // wait for disconnection
+      await futureState.timeout(Duration(seconds: timeout));
+    } finally {
+      opMutex.give();
     }
-    var response = FlutterBluePlus.instance._methodStream
-        .where((m) => m.method == "DiscoverServicesResult")
-        .map((m) => m.arguments)
-        .map((buffer) => protos.DiscoverServicesResult.fromBuffer(buffer))
-        .where((p) => p.remoteId == id.toString())
-        .map((p) => p.services)
-        .map((s) => s.map((p) => BluetoothService.fromProto(p)).toList())
-        .first
-        .then((list) {
-      _services.add(list);
+  }
+
+  /// Discover services, characteristics, and descriptors of the remote device
+  Future<List<BluetoothService>> discoverServices({int timeout = 15}) async {
+    // Only allow a single 'discoverServices' operation to be underway per device.
+    String key = remoteId.str + ":discoverServices";
+    _Mutex opMutex = await _MutexFactory.getMutexForKey(key);
+    await opMutex.take();
+
+    List<BluetoothService> result = [];
+
+    try {
+      if (await connectionState.first != BluetoothConnectionState.connected) {
+        throw FlutterBluePlusException('discoverServices', -1, 'device is not connected');
+      }
+
+      // signal that we have started
+      _isDiscoveringServices.add(true);
+
+      var responseStream = FlutterBluePlus._methodStream.stream
+          .where((m) => m.method == "OnDiscoverServicesResult")
+          .map((m) => m.arguments)
+          .map((buffer) => BmDiscoverServicesResult.fromMap(buffer))
+          .where((p) => p.remoteId == remoteId.str);
+
+      // Start listening now, before invokeMethod, to ensure we don't miss the response
+      Future<BmDiscoverServicesResult> futureResponse = responseStream.first;
+
+      await FlutterBluePlus._invokeMethod('discoverServices', remoteId.str);
+
+      // wait for response
+      BmDiscoverServicesResult response = await futureResponse.timeout(Duration(seconds: timeout));
+
+      // failed?
+      if (!response.success) {
+        throw FlutterBluePlusException("discoverServices", response.errorCode, response.errorString);
+      }
+
+      result = response.services.map((p) => BluetoothService.fromProto(p)).toList();
+
+      // remember known services
+      _knownServices[remoteId] = result;
+    } finally {
       _isDiscoveringServices.add(false);
-      return list;
-    });
+      _services.add(result);
+      opMutex.give();
+    }
 
-    await FlutterBluePlus.instance._channel
-        .invokeMethod('discoverServices', id.toString());
-
-    _isDiscoveringServices.add(true);
-
-    return response;
+    return result;
   }
 
-  /// Returns a list of Bluetooth GATT services offered by the remote device
-  /// This function requires that discoverServices has been completed for this device
-  Stream<List<BluetoothService>> get services async* {
-    yield await FlutterBluePlus.instance._channel
-        .invokeMethod('services', id.toString())
-        .then((buffer) =>
-            protos.DiscoverServicesResult.fromBuffer(buffer).services)
-        .then((i) => i.map((s) => BluetoothService.fromProto(s)).toList());
-    yield* _services.stream;
-  }
+  /// The current connection state of the device to this application
+  Stream<BluetoothConnectionState> get connectionState async* {
+    BluetoothConnectionState initialState = await FlutterBluePlus._methods
+        .invokeMethod('getConnectionState', remoteId.str)
+        .then((buffer) => BmConnectionStateResponse.fromMap(buffer))
+        .then((p) => _bmToBluetoothConnectionState(p.connectionState));
 
-  /// The current connection state of the device
-  Stream<BluetoothDeviceState> get state async* {
-    yield await FlutterBluePlus.instance._channel
-        .invokeMethod('deviceState', id.toString())
-        .then((buffer) => protos.DeviceStateResponse.fromBuffer(buffer))
-        .then((p) => BluetoothDeviceState.values[p.state.value]);
+    yield initialState;
 
-    yield* FlutterBluePlus.instance._methodStream
-        .where((m) => m.method == "DeviceState")
+    yield* FlutterBluePlus._methodStream.stream
+        .where((m) => m.method == "OnConnectionStateChanged")
         .map((m) => m.arguments)
-        .map((buffer) => protos.DeviceStateResponse.fromBuffer(buffer))
-        .where((p) => p.remoteId == id.toString())
-        .map((p) => BluetoothDeviceState.values[p.state.value]);
+        .map((buffer) => BmConnectionStateResponse.fromMap(buffer))
+        .where((p) => p.remoteId == remoteId.str)
+        .map((p) => _bmToBluetoothConnectionState(p.connectionState));
   }
 
-  /// The MTU size in bytes
+  /// The current MTU size in bytes
   Stream<int> get mtu async* {
-    yield await FlutterBluePlus.instance._channel
-        .invokeMethod('mtu', id.toString())
-        .then((buffer) => protos.MtuSizeResponse.fromBuffer(buffer))
-        .then((p) => p.mtu);
+    // wait for connection
+    await connectionState.where((v) => v == BluetoothConnectionState.connected).first;
 
-    yield* FlutterBluePlus.instance._methodStream
-        .where((m) => m.method == "MtuSize")
+    BmMtuChangedResponse response = await FlutterBluePlus._methods
+        .invokeMethod('getMtu', remoteId.str)
+        .then((buffer) => BmMtuChangedResponse.fromMap(buffer));
+
+    // failed?
+    if (!response.success) {
+      throw FlutterBluePlusException("mtu", response.errorCode, response.errorString);
+    }
+
+    // initial value
+    yield response.mtu;
+
+    yield* FlutterBluePlus._methodStream.stream
+        .where((m) => m.method == "OnMtuChanged")
         .map((m) => m.arguments)
-        .map((buffer) => protos.MtuSizeResponse.fromBuffer(buffer))
-        .where((p) => p.remoteId == id.toString())
+        .map((buffer) => BmMtuChangedResponse.fromMap(buffer))
+        .where((p) => p.remoteId == remoteId.str)
         .map((p) => p.mtu);
   }
 
-  /// Request to change the MTU Size
-  /// Throws error if request did not complete successfully
-  /// Request to change the MTU Size and returns the response back
-  /// Throws error if request did not complete successfully
-  Future<int> requestMtu(int desiredMtu) async {
-    var request = protos.MtuSizeRequest.create()
-      ..remoteId = id.toString()
-      ..mtu = desiredMtu;
+  /// Request to change MTU (Android Only)
+  ///  - returns new MTU
+  Future<int> requestMtu(int desiredMtu, {int timeout = 15}) async {
+    // Only allow a single 'requestMtu' operation to be underway per device.
+    String key = remoteId.str + ":requestMtu";
+    _Mutex opMutex = await _MutexFactory.getMutexForKey(key);
+    await opMutex.take();
 
-    var response = FlutterBluePlus.instance._methodStream
-        .where((m) => m.method == "MtuSize")
-        .map((m) => m.arguments)
-        .map((buffer) => protos.MtuSizeResponse.fromBuffer(buffer))
-        .where((p) => p.remoteId == id.toString())
-        .map((p) => p.mtu)
-        .first;
+    var mtu = 0;
 
-    await FlutterBluePlus.instance._channel
-        .invokeMethod('requestMtu', request.writeToBuffer());
+    try {
+      var request = BmMtuChangeRequest(
+        remoteId: remoteId.str,
+        mtu: desiredMtu,
+      );
 
-    return response;
+      var responseStream = FlutterBluePlus._methodStream.stream
+          .where((m) => m.method == "OnMtuChanged")
+          .map((m) => m.arguments)
+          .map((buffer) => BmMtuChangedResponse.fromMap(buffer))
+          .where((p) => p.remoteId == remoteId.str)
+          .map((p) => p.mtu);
+
+      // Start listening now, before invokeMethod, to ensure we don't miss the response
+      Future<int> futureResponse = responseStream.first;
+
+      await FlutterBluePlus._invokeMethod('requestMtu', request.toMap());
+
+      mtu = await futureResponse.timeout(Duration(seconds: timeout));
+    } finally {
+      opMutex.give();
+    }
+
+    return mtu;
   }
 
-  /// Indicates whether the Bluetooth Device can send a write without response
-  Future<bool> get canSendWriteWithoutResponse =>
-      Future.error(UnimplementedError());
+  /// Read the RSSI of connected remote device
+  Future<int> readRssi({int timeout = 15}) async {
+    // Only allow a single 'readRssi' operation to be underway per device.
+    String key = remoteId.str + ":readRssi";
+    _Mutex opMutex = await _MutexFactory.getMutexForKey(key);
+    await opMutex.take();
 
-  /// Read the RSSI for a connected remote device
-  Future<int> readRssi() async {
-    final remoteId = id.toString();
-    await FlutterBluePlus.instance._channel.invokeMethod('readRssi', remoteId);
+    int rssi = 0;
 
-    return FlutterBluePlus.instance._methodStream
-        .where((m) => m.method == "ReadRssiResult")
-        .map((m) => m.arguments)
-        .map((buffer) => protos.ReadRssiResult.fromBuffer(buffer))
-        .where((p) => (p.remoteId == remoteId))
-        .first
-        .then((c) {
-      return (c.rssi);
-    });
+    try {
+      var responseStream = FlutterBluePlus._methodStream.stream
+          .where((m) => m.method == "OnReadRssiResult")
+          .map((m) => m.arguments)
+          .map((buffer) => BmReadRssiResult.fromMap(buffer))
+          .where((p) => (p.remoteId == remoteId.str));
+
+      // Start listening now, before invokeMethod, to ensure we don't miss the response
+      Future<BmReadRssiResult> futureResponse = responseStream.first;
+
+      await FlutterBluePlus._invokeMethod('readRssi', remoteId.str);
+
+      // wait for response
+      BmReadRssiResult response = await futureResponse.timeout(Duration(seconds: timeout));
+
+      // failed?
+      if (!response.success) {
+        throw FlutterBluePlusException("readRssi", response.errorCode, response.errorString);
+      }
+      rssi = response.rssi;
+    } finally {
+      opMutex.give();
+    }
+
+    return rssi;
+  }
+
+  /// Request connection priority update (Android only)
+  Future<void> requestConnectionPriority({required ConnectionPriority connectionPriorityRequest}) async {
+    if (Platform.isAndroid == false) {
+      throw FlutterBluePlusException("setPreferredPhy", -1, "android-only");
+    }
+
+    var request = BmConnectionPriorityRequest(
+      remoteId: remoteId.str,
+      connectionPriority: _bmConnectionPriorityEnum(connectionPriorityRequest),
+    );
+
+    await FlutterBluePlus._invokeMethod(
+      'requestConnectionPriority',
+      request.toMap(),
+    );
+  }
+
+  /// Set the preferred connection (Android Only)
+  ///   - [txPhy] bitwise OR of all allowed phys for Tx, e.g. (Phy.le2m.mask | Phy.leCoded.mask)
+  ///   - [txPhy] bitwise OR of all allowed phys for Rx, e.g. (Phy.le2m.mask | Phy.leCoded.mask)
+  ///   - [option] preferred coding to use when transmitting on Phy.leCoded
+  /// Please note that this is just a recommendation given to the system.
+  Future<void> setPreferredPhy({
+    required int txPhy,
+    required int rxPhy,
+    required PhyCoding option,
+  }) async {
+    if (Platform.isAndroid == false) {
+      throw FlutterBluePlusException("setPreferredPhy", -1, "android-only");
+    }
+
+    var request = BmPreferredPhy(
+      remoteId: remoteId.str,
+      txPhy: txPhy,
+      rxPhy: rxPhy,
+      phyOptions: option.index,
+    );
+
+    await FlutterBluePlus._invokeMethod(
+      'setPreferredPhy',
+      request.toMap(),
+    );
+  }
+
+  /// Force pairing dialogue to show. (Android Only)
+  /// Typically, the only way to create a pairing request and show the pairing
+  /// dialog in Android is to connect and try to use an encrypted characteristic which
+  /// is a bit awkward of an API. Calling this function circumvents that step.
+  Future<void> createBond({int timeout = 90}) async {
+    if (Platform.isAndroid == false) {
+      throw FlutterBluePlusException("createBond", -1, "android-only");
+    }
+
+    // Only allow a single 'createBond' operation to be underway per device.
+    String key = remoteId.str + ":createBond";
+    _Mutex opMutex = await _MutexFactory.getMutexForKey(key);
+    await opMutex.take();
+
+    try {
+
+      BmBondStateEnum initialState = await FlutterBluePlus._methods
+          .invokeMethod('getBondState', remoteId.str)
+          .then((buffer) => BmBondStateResponse.fromMap(buffer))
+          .then((p) => p.bondState);
+
+      if (initialState == BmBondStateEnum.bonded) {
+        return; // no work to do
+      }
+
+      // Start listening now, before invokeMethod, to ensure we don't miss the response
+      var responseStream = FlutterBluePlus._methodStream.stream
+          .where((m) => m.method == "OnBondStateChanged")
+          .map((m) => m.arguments)
+          .map((buffer) => BmBondStateResponse.fromMap(buffer))
+          .where((p) => p.remoteId == remoteId.str)
+          .where((p) => p.bondState != BmBondStateEnum.bonding);
+
+      // Start listening now, before invokeMethod, to ensure we don't miss the response
+      Future<BmBondStateResponse> futureResponse = responseStream.first;
+
+      // invoke
+      await FlutterBluePlus._invokeMethod('createBond', remoteId.str);
+
+      // wait for response
+      BmBondStateResponse bs = await futureResponse.timeout(Duration(seconds: timeout));
+
+      // success?
+      if (bs.bondState != BmBondStateEnum.bonded) {
+        throw FlutterBluePlusException("createBond", -1, "Could not establish bond");
+      }
+    } finally {
+      opMutex.give();
+    }
+  }
+
+  /// Remove bond (Android Only)
+  Future<void> removeBond() async {
+    if (Platform.isAndroid == false) {
+      throw FlutterBluePlusException("removeBond", -1, "android-only");
+    }
+
+    /// This is a hidden function in android. So I am not sure
+    /// if OnBondStateChanged will actually change.
+    await FlutterBluePlus._methods.invokeMethod('removeBond', remoteId.str);
+  }
+
+  /// Refresh ble services & characteristics (Android Only)
+  Future<void> clearGattCache() async {
+    if (Platform.isAndroid == false) {
+      throw FlutterBluePlusException("clearGattCache", -1, "android-only");
+    }
+    await FlutterBluePlus._invokeMethod('clearGattCache', remoteId.str);
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is BluetoothDevice &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+          (other is BluetoothDevice && runtimeType == other.runtimeType && remoteId == other.remoteId);
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => remoteId.hashCode;
 
   @override
   String toString() {
-    return 'BluetoothDevice{id: $id, name: $name, type: $type, isDiscoveringServices: ${_isDiscoveringServices.value}, _services: ${_services.value}';
+    return 'BluetoothDevice{'
+        'remoteId: $remoteId, '
+        'localName: $localName, '
+        'type: $type, '
+        'isDiscoveringServices: ${_isDiscoveringServices.value}, '
+        'services: ${_knownServices[remoteId]}'
+        '}';
   }
+
+  @Deprecated('Use createBond() instead')
+  Future<void> pair() async => await createBond();
+
+  @Deprecated('Use remoteId instead')
+  DeviceIdentifier get id => remoteId;
+
+  @Deprecated('Use localName instead')
+  String get name => localName;
+
+  @Deprecated('Use connectionState instead')
+  Stream<BluetoothConnectionState> get state => connectionState;
+
+  @Deprecated('Use servicesStream instead')
+  Stream<List<BluetoothService>> get services => servicesStream;
 }
-
-enum BluetoothDeviceType { unknown, classic, le, dual }
-
-enum BluetoothDeviceState { disconnected, connecting, connected, disconnecting }
