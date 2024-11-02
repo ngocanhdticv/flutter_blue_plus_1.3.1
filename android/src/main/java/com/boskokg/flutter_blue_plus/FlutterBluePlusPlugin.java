@@ -239,17 +239,69 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
 
       case "turnOn":
       {
-        if (!mBluetoothAdapter.isEnabled()) {
-          result.success(mBluetoothAdapter.enable());
+        ArrayList<String> permissions = new ArrayList<>();
+
+        if (Build.VERSION.SDK_INT >= 31) { // Android 12 (October 2021)
+          permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
         }
+
+        if (Build.VERSION.SDK_INT <= 30) { // Android 11 (September 2020)
+          permissions.add(Manifest.permission.BLUETOOTH);
+        }
+        ensurePermissions(permissions, (granted, perm) -> {
+
+          if (granted == false) {
+            result.error("turnOn",
+                    String.format("FlutterBluePlus requires %s permission", perm), null);
+            return;
+          }
+
+          if (mBluetoothAdapter.isEnabled()) {
+            result.success(false); // no work to do
+            return;
+          }
+
+          Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+
+          activityBinding.getActivity().startActivityForResult(enableBtIntent, enableBluetoothRequestCode);
+
+          result.success(true);
+          return;
+        });
         break;
       }
 
       case "turnOff":
       {
-        if (mBluetoothAdapter.isEnabled()) {
-          result.success(mBluetoothAdapter.disable());
+        ArrayList<String> permissions = new ArrayList<>();
+
+        if (Build.VERSION.SDK_INT >= 31) { // Android 12 (October 2021)
+          permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
         }
+
+        if (Build.VERSION.SDK_INT <= 30) { // Android 11 (September 2020)
+          permissions.add(Manifest.permission.BLUETOOTH);
+        }
+
+        ensurePermissions(permissions, (granted, perm) -> {
+
+          if (granted == false) {
+            result.error("turnOff",
+                    String.format("FlutterBluePlus requires %s permission", perm), null);
+            return;
+          }
+
+          if (mBluetoothAdapter.isEnabled() == false) {
+            result.success(true); // no work to do
+            return;
+          }
+
+          // this is deprecated in API level 33.
+          boolean disabled = mBluetoothAdapter.disable();
+
+          result.success(disabled);
+          return;
+        });
         break;
       }
 
@@ -735,6 +787,42 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
       // Permission already granted
       operation.op(true, permission);
     }
+  }
+
+  private void ensurePermissions(List<String> permissions, OperationOnPermission operation) {
+    // Filter out permissions that are already granted
+    List<String> permissionsNeeded = new ArrayList<>();
+    for (String permission : permissions) {
+      if (permission != null && ContextCompat.checkSelfPermission(context, permission)
+              != PackageManager.PERMISSION_GRANTED) {
+        permissionsNeeded.add(permission);
+      }
+    }
+
+    // If all permissions are granted, proceed with the operation
+    if (permissionsNeeded.isEmpty()) {
+      operation.op(true, null);
+      return;
+    }
+
+    askPermission(permissionsNeeded, operation);
+  }
+
+  private void askPermission(List<String> permissionsNeeded, OperationOnPermission operation) {
+    if (permissionsNeeded.isEmpty()) {
+      operation.op(true, null);
+      return;
+    }
+
+    // Store the operation with the current request code
+    operationsOnPermission.put(lastEventId, operation);
+
+    ActivityCompat.requestPermissions(
+            activityBinding.getActivity(),
+            permissionsNeeded.toArray(new String[0]),
+            lastEventId);
+
+    lastEventId++;
   }
 
   private BluetoothGatt locateGatt(String remoteId) throws Exception {
