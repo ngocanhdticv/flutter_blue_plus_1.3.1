@@ -86,6 +86,8 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
         void op(boolean granted, String permission);
     }
 
+    private final int enableBluetoothRequestCode = 1879842617;
+
     private int lastEventId = 1452;
     private final Map<Integer, OperationOnPermission> operationsOnPermission = new HashMap<>();
 
@@ -236,7 +238,12 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
 
             case "turnOn": {
                 if (!mBluetoothAdapter.isEnabled()) {
-                    result.success(mBluetoothAdapter.enable());
+//                    result.success(mBluetoothAdapter.enable());
+                    Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                    activityBinding.getActivity().startActivityForResult(enableBtIntent, enableBluetoothRequestCode);
+                    result.success(true);
+                } else {
+                    result.success(false);
                 }
                 break;
             }
@@ -1065,6 +1072,7 @@ public class FlutterBluePlusPlugin implements FlutterPlugin, MethodCallHandler, 
                 Protos.SetNotificationResponse.Builder q = Protos.SetNotificationResponse.newBuilder();
                 q.setRemoteId(gatt.getDevice().getAddress());
                 q.setCharacteristic(ProtoMaker.from(gatt.getDevice(), descriptor.getCharacteristic(), gatt));
+                q.setSuccess(status == BluetoothGatt.GATT_SUCCESS);
                 invokeMethodUIThread("SetNotificationResponse", q.build().toByteArray());
             }
         }
